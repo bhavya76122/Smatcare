@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartCare Login</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="auth-page">
+  <div class="auth-card">
+    <h1>SmartCare</h1>
+    <p class="auth-subtitle">Login to continue</p>
+
+    <input type="text" id="loginUsername" placeholder="Username" />
+    <input type="password" id="loginPassword" placeholder="Password" />
+    <button onclick="loginUser()">Login</button>
+
+    <p class="auth-footer">
+      Don't have an account?
+      <a href="register.html">Register</a>
+    </p>
+  </div>
+
+  <script>
+    function loginUser() {
+      const username = document.getElementById("loginUsername").value.trim();
+      const password = document.getElementById("loginPassword").value.trim();
+
+      const savedUsername = localStorage.getItem("smartcare_username");
+      const savedPassword = localStorage.getItem("smartcare_password");
+
+      if (username === savedUsername && password === savedPassword) {
+        localStorage.setItem("smartcare_logged_in", "true");
+        alert("Login successful");
+        window.location.href = "index.html";
+      } else {
+        alert("Invalid username or password");
+      }
+    }
+  </script>
+</body>
+</html>

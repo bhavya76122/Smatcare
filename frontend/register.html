@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartCare Register</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="auth-page">
+  <div class="auth-card">
+    <h1>Create Account</h1>
+    <p class="auth-subtitle">Register for SmartCare</p>
+
+    <input type="text" id="registerUsername" placeholder="Username" />
+    <input type="password" id="registerPassword" placeholder="Password" />
+    <button onclick="registerUser()">Register</button>
+
+    <p class="auth-footer">
+      Already have an account?
+      <a href="login.html">Login</a>
+    </p>
+  </div>
+
+  <script>
+    function registerUser() {
+      const username = document.getElementById("registerUsername").value.trim();
+      const password = document.getElementById("registerPassword").value.trim();
+
+      if (!username || !password) {
+        alert("Please enter username and password");
+        return;
+      }
+
+      localStorage.setItem("smartcare_username", username);
+      localStorage.setItem("smartcare_password", password);
+
+      alert("Registration successful");
+      window.location.href = "login.html";
+    }
+  </script>
+</body>
+</html>

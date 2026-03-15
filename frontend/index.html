@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartCare - Smart Healthcare System</title>
+
+  <link rel="stylesheet" href="style.css" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="logo">
+      <i class="fa-solid fa-heart-pulse"></i>
+      <span>SmartCare</span>
+    </div>
+
+    <nav>
+      <a href="#home">Home</a>
+      <a href="#predict">Prediction</a>
+      <a href="#dashboard">Dashboard</a>
+      <a href="#doctor">Doctor</a>
+      <a href="#records">Records</a>
+      <a href="#reminder">Reminder</a>
+      <a href="#mapSection">Hospitals</a>
+      <a href="#chatbot">Assistant</a>
+    </nav>
+
+    <button class="nav-btn" onclick="logoutUser()">Logout</button>
+  </header>
+
+  <section class="hero" id="home">
+    <div class="hero-content" data-aos="fade-right">
+      <p class="tagline">AI + Healthcare + IoT + Accessibility</p>
+      <h1>Smart Healthcare System</h1>
+      <p class="hero-text">
+        Predict diseases using machine learning, book appointments, track health,
+        set medicine reminders, find nearby hospitals, store digital records,
+        use voice input, and showcase IoT vitals.
+      </p>
+      <div class="hero-buttons">
+        <a href="#predict" class="primary-btn">Start Prediction</a>
+        <a href="#dashboard" class="secondary-btn">View Dashboard</a>
+      </div>
+    </div>
+
+    <div class="hero-visual" data-aos="zoom-in">
+      <div class="glass-card">
+        <i class="fa-solid fa-stethoscope big-icon"></i>
+        <h3>AI Powered SmartCare</h3>
+        <p>Decorative and hackathon-ready healthcare platform.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="features-section">
+    <div class="section-title" data-aos="fade-up">
+      <h2>Main Features</h2>
+      <p>Everything needed for a strong healthcare hackathon demo.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card"><i class="fa-solid fa-brain"></i><h3>AI Prediction</h3><p>ML-based disease prediction from symptoms.</p></div>
+      <div class="feature-card"><i class="fa-solid fa-user-doctor"></i><h3>Appointments</h3><p>Book doctor appointments with ease.</p></div>
+      <div class="feature-card"><i class="fa-solid fa-file-medical"></i><h3>Records</h3><p>Store and display medical records.</p></div>
+      <div class="feature-card"><i class="fa-solid fa-chart-line"></i><h3>Dashboard</h3><p>Visual charts and latest vitals view.</p></div>
+      <div class="feature-card"><i class="fa-solid fa-microphone"></i><h3>Voice Input</h3><p>Select symptoms using speech.</p></div>
+      <div class="feature-card"><i class="fa-solid fa-location-dot"></i><h3>Nearby Hospitals</h3><p>Location-based hospital discovery.</p></div>
+    </div>
+  </section>
+
+  <section class="tool-section" id="predict">
+    <div class="section-title">
+      <h2>AI Disease Prediction</h2>
+      <p>Select multiple symptoms and get a predicted disease with advice.</p>
+    </div>
+
+    <div class="tool-card">
+      <div class="symptom-toolbar">
+        <button class="secondary-small-btn" onclick="startVoiceInput()">🎤 Voice Input</button>
+        <button class="secondary-small-btn" onclick="clearSymptoms()">Clear Selection</button>
+      </div>
+
+      <div class="form-group">
+  <label>Select Symptoms</label>
+
+  <select id="symptomSelect" multiple size="10"></select>
+
+</div>
+      <button class="primary-btn full-btn" onclick="predictDisease()">Predict Disease</button>
+
+      <div class="result-box">
+        <h3>Prediction Result</h3>
+        <p id="predictionResult">Prediction result will appear here.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="double-section">
+    <div class="mini-tool">
+      <h2><i class="fa-solid fa-weight-scale"></i> BMI Calculator</h2>
+      <div class="form-group">
+        <label>Height (cm)</label>
+        <input type="number" id="height" placeholder="Enter height">
+      </div>
+      <div class="form-group">
+        <label>Weight (kg)</label>
+        <input type="number" id="weight" placeholder="Enter weight">
+      </div>
+      <button class="primary-btn full-btn" onclick="calculateBMI()">Calculate BMI</button>
+      <p class="output" id="bmiResult">BMI result will appear here.</p>
+    </div>
+
+    <div class="mini-tool">
+      <h2><i class="fa-solid fa-heart-circle-bolt"></i> Health Status Check</h2>
+      <div class="form-group">
+        <label>Heart Rate</label>
+        <input type="number" id="heartRate" placeholder="e.g. 78">
+      </div>
+      <div class="form-group">
+        <label>Blood Pressure</label>
+        <input type="text" id="bp" placeholder="e.g. 120/80">
+      </div>
+      <div class="form-group">
+        <label>Blood Sugar</label>
+        <input type="number" id="sugar" placeholder="e.g. 110">
+      </div>
+      <button class="primary-btn full-btn" onclick="checkHealthStatus()">Check Health</button>
+      <p class="output" id="healthStatusResult">Health status will appear here.</p>
+    </div>
+  </section>
+
+  <section class="dashboard-section" id="dashboard">
+    <div class="section-title">
+      <h2>Health Dashboard</h2>
+      <p>Charts and latest IoT vitals.</p>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="chart-card">
+        <h3>Weekly Heart Rate</h3>
+        <canvas id="heartChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <h3>Blood Sugar Trend</h3>
+        <canvas id="sugarChart"></canvas>
+      </div>
+
+      <div class="chart-card wide-chart">
+        <h3>Latest IoT Vitals</h3>
+        <div id="latestVitals" class="iot-box">No vitals received yet.</div>
+      </div>
+    </div>
+  </section>
+<section class="tool-section" id="doctor">
+  <div class="section-title">
+    <h2>Doctor Appointment Booking</h2>
+  </div>
+
+  <div class="tool-card">
+    <div class="grid-2">
+
+      <div class="form-group">
+        <label>Patient Name</label>
+        <input type="text" id="patientName" placeholder="Enter your name">
+      </div>
+
+      <!-- NEW EMAIL FIELD -->
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="patientEmail" placeholder="Enter your email">
+      </div>
+
+      <div class="form-group">
+        <label>Doctor</label>
+        <select id="doctorName">
+          <option>Dr. Priya - General Physician</option>
+          <option>Dr. Arjun - Cardiologist</option>
+          <option>Dr. Sneha - Dermatologist</option>
+          <option>Dr. Rahul - Neurologist</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="appointmentDate">
+      </div>
+
+      <div class="form-group">
+        <label>Time</label>
+        <select id="appointmentTime">
+          <option>10:00 AM</option>
+          <option>11:30 AM</option>
+          <option>02:00 PM</option>
+          <option>04:30 PM</option>
+        </select>
+      </div>
+
+    </div>
+
+    <button class="primary-btn full-btn" onclick="bookAppointment()">Book Appointment</button>
+    <p class="output" id="bookingResult">Booking result will appear here.</p>
+
+    <div class="saved-list">
+      <h3>Booked Appointments</h3>
+      <ul id="appointmentList"></ul>
+    </div>
+  </div>
+</section>
+
+  <section class="tool-section" id="records">
+    <div class="section-title">
+      <h2>Medical Records</h2>
+    </div>
+
+    <div class="tool-card">
+      <div class="form-group">
+        <label>Patient ID</label>
+        <input type="text" id="patientId" placeholder="Enter patient ID">
+      </div>
+
+      <div class="form-group">
+        <label>Choose Report</label>
+        <input type="file" id="recordFile">
+      </div>
+
+      <button class="primary-btn full-btn" onclick="saveRecord()">Save Record</button>
+      <p class="output" id="recordResult">Record result will appear here.</p>
+
+      <div class="saved-list">
+        <h3>Saved Records</h3>
+        <ul id="recordList"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="tool-section" id="reminder">
+  <div class="section-title">
+    <h2>Medicine Reminder</h2>
+  </div>
+
+  <div class="tool-card">
+
+    <div class="grid-2">
+
+      <div class="form-group">
+        <label>Medicine Name</label>
+        <input type="text" id="medicineName" placeholder="e.g. Paracetamol">
+      </div>
+
+      <div class="form-group">
+        <label>Reminder Time</label>
+        <input type="time" id="medicineTime">
+      </div>
+
+    </div>
+
+    <button class="primary-btn full-btn" onclick="addMedicineReminder()">
+      Add Reminder
+    </button>
+
+    <p class="output" id="reminderResult"></p>
+
+    <div class="saved-list">
+      <h3>Today's Medicines</h3>
+      <ul id="reminderList"></ul>
+    </div>
+
+  </div>
+</section>
+
+  <section class="tool-section" id="mapSection">
+    <div class="section-title">
+      <h2>Nearby Hospitals</h2>
+    </div>
+
+    <div class="tool-card">
+      <button class="primary-btn" onclick="loadNearbyHospitals()">Find Nearby Hospitals</button>
+      <div id="map"></div>
+      <div id="hospitalList" class="hospital-list"></div>
+    </div>
+  </section>
+
+  <section class="tool-section">
+    <div class="section-title">
+      <h2>Emergency Alert</h2>
+      <p>Simulate emergency healthcare response.</p>
+    </div>
+
+    <div class="tool-card">
+      <button class="primary-btn full-btn" onclick="simulateEmergency()">Run Emergency Check</button>
+      <p class="output" id="emergencyResult">Emergency status will appear here.</p>
+    </div>
+  </section>
+
+  <section class="chatbot-section" id="chatbot">
+    <div class="section-title">
+      <h2>AI Health Assistant</h2>
+    </div>
+
+    <div class="chatbot-card">
+      <div class="chat-box" id="chatBox">
+        <div class="bot-msg">Hello. I am SmartCare Assistant. Ask me about fever, BP, sugar, diet, hydration, or emergency care.</div>
+      </div>
+
+      <div class="chat-input-area">
+        <input type="text" id="chatInput" placeholder="Ask your health-related question...">
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <h3>SmartCare</h3>
+    <p>Smart Healthcare System Hackathon Project</p>
+  </footer>
+
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
