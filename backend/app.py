@@ -20,15 +20,11 @@ MODEL_PATH = os.path.join(BASE_DIR, "model.pkl")
 SYMPTOMS_PATH = os.path.join(BASE_DIR, "symptoms.pkl")
 
 
-# ================= DATABASE =================
-
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
-
-# ================= LOAD MODEL =================
 
 with open(MODEL_PATH, "rb") as f:
     model = pickle.load(f)
@@ -36,26 +32,26 @@ with open(MODEL_PATH, "rb") as f:
 with open(SYMPTOMS_PATH, "rb") as f:
     symptoms_list = pickle.load(f)
 
-
-# ================= EMAIL FUNCTION =================
-
-def send_email(patient_email, doctor_name, appointment_date, appointment_time):
+def send_appointment_email(patient_email, patient_name, hospital_name, appointment_date, appointment_time):
 
     sender_email = "thatipallybhavya82@gmail.com"
-    sender_password = "yzwrqbgcrtto trcp".replace(" ", "")
+    sender_password = "epmmwvcgcuruglwh"
 
-    subject = "SmartCare Appointment Confirmation"
+    subject = "Appointment Confirmation - SmartCare"
 
     body = f"""
-Hello,
+Hello {patient_name},
 
 Your appointment has been successfully booked.
 
-Doctor: {doctor_name}
+Hospital: {hospital_name}
 Date: {appointment_date}
 Time: {appointment_time}
 
-Thank you for using SmartCare Healthcare System.
+Please arrive 10 minutes early.
+
+Thank you,
+SmartCare Team
 """
 
     msg = MIMEMultipart()
@@ -69,34 +65,99 @@ Thank you for using SmartCare Healthcare System.
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
         server.login(sender_email, sender_password)
-        server.send_message(msg)
+        server.sendmail(sender_email, patient_email, msg.as_string())
         server.quit()
-
         print("Email sent successfully")
 
     except Exception as e:
         print("Email sending failed:", e)
 
 
-# ================= HOME =================
-
 @app.route("/")
 def home():
     return jsonify({"message": "SmartCare Backend Running"})
 
 
-# ================= SYMPTOMS =================
+@app.route("/register", methods=["POST","OPTIONS"])
+def register():
+
+    if request.method == "OPTIONS":
+        return jsonify({"message":"OK"}),200
+
+    data = request.get_json()
+
+    username = data.get("username","").strip()
+    password = data.get("password","").strip()
+
+    if not username or not password:
+        return jsonify({"success":False,"message":"Username and password required"}),400
+
+    conn = get_db()
+
+    existing = conn.execute(
+        "SELECT id FROM users WHERE username=?",
+        (username,)
+    ).fetchone()
+
+    if existing:
+        conn.close()
+        return jsonify({"success":False,"message":"Username already exists"}),400
+
+    conn.execute(
+        "INSERT INTO users (username,password) VALUES (?,?)",
+        (username,password)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "success":True,
+        "message":"Registration successful"
+    })
+
+
+@app.route("/login", methods=["POST","OPTIONS"])
+def login():
+
+    if request.method == "OPTIONS":
+        return jsonify({"message":"OK"}),200
+
+    data = request.get_json()
+
+    username = data.get("username","").strip()
+    password = data.get("password","").strip()
+
+    conn = get_db()
+
+    user = conn.execute(
+        "SELECT * FROM users WHERE username=? AND password=?",
+        (username,password)
+    ).fetchone()
+
+    conn.close()
+
+    if user:
+        return jsonify({
+            "success":True,
+            "message":"Login successful",
+            "user_id":user["id"],
+            "username":user["username"]
+        })
+
+    return jsonify({
+        "success":False,
+        "message":"Invalid username or password"
+    }),401
+
 
 @app.route("/symptoms", methods=["GET"])
 def get_symptoms():
     return jsonify({"symptoms": symptoms_list})
 
 
-# ================= DISEASE PREDICTION =================
-
 @app.route("/predict", methods=["POST"])
 def predict():
-
     data = request.get_json()
     selected_symptoms = data.get("symptoms", [])
 
@@ -107,7 +168,6 @@ def predict():
             input_vector[symptoms_list.index(symptom)] = 1
 
     prediction = model.predict([input_vector])[0]
-
     advice = DISEASE_INFO.get(
         prediction,
         "Please consult a doctor for professional diagnosis."
@@ -119,47 +179,43 @@ def predict():
         "selected_symptoms": selected_symptoms
     })
 
-
-# ================= CREATE APPOINTMENT =================
-
 @app.route("/appointments", methods=["POST"])
 def create_appointment():
-
     data = request.get_json()
 
+    user_id = data.get("user_id")
     patient_name = data.get("patient_name")
-    patient_email = data.get("email")
+    email = data.get("email")
     doctor_name = data.get("doctor_name")
     appointment_date = data.get("appointment_date")
     appointment_time = data.get("appointment_time")
 
-    conn = get_db()
-    cur = conn.cursor()
+    if not user_id or not patient_name or not doctor_name:
+        return jsonify({"message": "Missing data"}), 400
 
-    cur.execute("""
-        INSERT INTO appointments (patient_name, doctor_name, appointment_date, appointment_time)
-        VALUES (?, ?, ?, ?)
-    """, (patient_name, doctor_name, appointment_date, appointment_time))
+    conn = sqlite3.connect("healthcare.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO appointments 
+        (user_id, patient_name, doctor_name, appointment_date, appointment_time)
+        VALUES (?, ?, ?, ?, ?)
+    """, (user_id, patient_name, doctor_name, appointment_date, appointment_time))
 
     conn.commit()
+    send_appointment_email(email, patient_name, hospital_name, appointment_date, appointment_time)
     conn.close()
-
-    send_email(patient_email, doctor_name, appointment_date, appointment_time)
 
     return jsonify({"message": "Appointment booked successfully"})
 
 
-# ================= LIST APPOINTMENTS =================
-
-@app.route("/appointments", methods=["GET"])
-def list_appointments():
-
+@app.route("/appointments/<int:user_id>", methods=["GET"])
+def list_appointments(user_id):
     conn = get_db()
-
     rows = conn.execute(
-        "SELECT * FROM appointments ORDER BY id DESC"
+        "SELECT * FROM appointments WHERE user_id = ? ORDER BY id DESC",
+        (user_id,)
     ).fetchall()
-
     conn.close()
 
     return jsonify({
@@ -167,43 +223,38 @@ def list_appointments():
     })
 
 
-# ================= SAVE RECORD =================
-
 @app.route("/records", methods=["POST"])
 def save_record():
-
     data = request.get_json()
 
+    user_id = data.get("user_id")
     patient_id = data.get("patient_id")
     file_name = data.get("file_name")
+
+    if not user_id or not patient_id or not file_name:
+        return jsonify({"error": "user_id, patient_id and file_name are required"}), 400
 
     uploaded_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     conn = get_db()
     cur = conn.cursor()
-
     cur.execute("""
-        INSERT INTO records (patient_id, file_name, uploaded_at)
-        VALUES (?, ?, ?)
-    """, (patient_id, file_name, uploaded_at))
-
+        INSERT INTO records (user_id, patient_id, file_name, uploaded_at)
+        VALUES (?, ?, ?, ?)
+    """, (user_id, patient_id, file_name, uploaded_at))
     conn.commit()
     conn.close()
 
     return jsonify({"message": "Record saved"})
 
 
-# ================= LIST RECORDS =================
-
-@app.route("/records", methods=["GET"])
-def list_records():
-
+@app.route("/records/<int:user_id>", methods=["GET"])
+def list_records(user_id):
     conn = get_db()
-
     rows = conn.execute(
-        "SELECT * FROM records ORDER BY id DESC"
+        "SELECT * FROM records WHERE user_id = ? ORDER BY id DESC",
+        (user_id,)
     ).fetchall()
-
     conn.close()
 
     return jsonify({
@@ -211,44 +262,38 @@ def list_records():
     })
 
 
-# ================= UPLOAD VITALS =================
-
 @app.route("/vitals", methods=["POST"])
 def upload_vitals():
-
     data = request.get_json()
 
+    user_id = data.get("user_id")
     heart_rate = data.get("heart_rate")
     temperature = data.get("temperature")
     spo2 = data.get("spo2")
-
     uploaded_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if not user_id:
+        return jsonify({"message": "user_id is required"}), 400
 
     conn = get_db()
     cur = conn.cursor()
-
     cur.execute("""
-        INSERT INTO vitals (heart_rate, temperature, spo2, uploaded_at)
-        VALUES (?, ?, ?, ?)
-    """, (heart_rate, temperature, spo2, uploaded_at))
-
+        INSERT INTO vitals (user_id, heart_rate, temperature, spo2, uploaded_at)
+        VALUES (?, ?, ?, ?, ?)
+    """, (user_id, heart_rate, temperature, spo2, uploaded_at))
     conn.commit()
     conn.close()
 
     return jsonify({"message": "Vitals uploaded"})
 
 
-# ================= LATEST VITALS =================
-
-@app.route("/vitals/latest", methods=["GET"])
-def latest_vitals():
-
+@app.route("/vitals/latest/<int:user_id>", methods=["GET"])
+def latest_vitals(user_id):
     conn = get_db()
-
     row = conn.execute(
-        "SELECT * FROM vitals ORDER BY id DESC LIMIT 1"
+        "SELECT * FROM vitals WHERE user_id = ? ORDER BY id DESC LIMIT 1",
+        (user_id,)
     ).fetchone()
-
     conn.close()
 
     if row is None:
@@ -256,8 +301,6 @@ def latest_vitals():
 
     return jsonify({"vitals": dict(row)})
 
-
-# ================= RUN SERVER =================
 
 if __name__ == "__main__":
     app.run(debug=True)

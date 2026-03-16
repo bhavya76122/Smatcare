@@ -1,42 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SmartCare Register</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<title>SmartCare Register</title>
+<link rel="stylesheet" href="style.css">
 </head>
+
 <body class="auth-page">
-  <div class="auth-card">
-    <h1>Create Account</h1>
-    <p class="auth-subtitle">Register for SmartCare</p>
 
-    <input type="text" id="registerUsername" placeholder="Username" />
-    <input type="password" id="registerPassword" placeholder="Password" />
-    <button onclick="registerUser()">Register</button>
+<div class="auth-card">
 
-    <p class="auth-footer">
-      Already have an account?
-      <a href="login.html">Login</a>
-    </p>
-  </div>
+<h1>Create Account</h1>
+<p class="auth-subtitle">Register for SmartCare</p>
 
-  <script>
-    function registerUser() {
-      const username = document.getElementById("registerUsername").value.trim();
-      const password = document.getElementById("registerPassword").value.trim();
+<input type="text" id="registerUsername" placeholder="Username">
 
-      if (!username || !password) {
-        alert("Please enter username and password");
-        return;
-      }
+<input type="password" id="registerPassword" placeholder="Password">
 
-      localStorage.setItem("smartcare_username", username);
-      localStorage.setItem("smartcare_password", password);
+<button onclick="registerUser()">Register</button>
 
-      alert("Registration successful");
-      window.location.href = "login.html";
-    }
-  </script>
+<p class="auth-footer">
+Already have account?
+<a href="login.html">Login</a>
+</p>
+
+</div>
+
+<script>
+
+async function registerUser(){
+
+let username=document.getElementById("registerUsername").value
+let password=document.getElementById("registerPassword").value
+
+if(!username || !password){
+alert("Enter username and password")
+return
+}
+
+let res = await fetch("http://127.0.0.1:5000/register",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+username:username,
+password:password
+
+})
+
+})
+
+let data = await res.json()
+
+alert(data.message)
+
+if(data.success){
+
+window.location.href="login.html"
+
+}
+
+}
+
+</script>
+
 </body>
 </html>

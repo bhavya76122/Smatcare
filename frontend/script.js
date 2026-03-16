@@ -17,53 +17,46 @@ AOS.init({
 
 function logoutUser() {
   localStorage.removeItem("smartcare_logged_in");
+  localStorage.removeItem("user_id");
+  localStorage.removeItem("username");
   window.location.href = "login.html";
+}
+
+function getUserId() {
+  return localStorage.getItem("user_id");
 }
 
 async function loadSymptoms() {
   try {
-
     const response = await fetch(`${API_BASE}/symptoms`);
-
-    if (!response.ok) {
-      throw new Error("Backend not reachable");
-    }
+    if (!response.ok) throw new Error("Backend not reachable");
 
     const data = await response.json();
-
     const select = document.getElementById("symptomSelect");
 
-    if (!select) {
-      console.error("symptomSelect element not found");
-      return;
-    }
+    if (!select) return;
 
     select.innerHTML = "";
 
     data.symptoms.forEach(symptom => {
-
       const option = document.createElement("option");
       option.value = symptom;
       option.textContent = symptom.replace(/_/g, " ");
-
       select.appendChild(option);
-
     });
-
   } catch (error) {
-
     console.error("Error loading symptoms:", error);
-
     const result = document.getElementById("predictionResult");
     if (result) {
       result.innerHTML = "Unable to load symptoms. Check backend server.";
     }
-
   }
 }
 
 function clearSymptoms() {
   const select = document.getElementById("symptomSelect");
+  if (!select) return;
+
   for (let option of select.options) {
     option.selected = false;
   }
@@ -72,6 +65,8 @@ function clearSymptoms() {
 async function predictDisease() {
   const select = document.getElementById("symptomSelect");
   const selected = [];
+
+  if (!select) return;
 
   for (let option of select.options) {
     if (option.selected) {
@@ -185,45 +180,45 @@ function checkHealthStatus() {
   result.innerHTML = messages.join("<br>");
 }
 
-async function bookAppointment(){
+async function bookAppointment() {
 
-let patientName=document.getElementById("patientName").value
-let patientEmail=document.getElementById("patientEmail").value
-let doctorName=document.getElementById("doctorName").value
-let appointmentDate=document.getElementById("appointmentDate").value
-let appointmentTime=document.getElementById("appointmentTime").value
+    const patient_name = document.getElementById("patientName").value;
+    const email = document.getElementById("email").value;
+    const hospital = document.getElementById("hospital").value;
+    const date = document.getElementById("date").value;
+    const time = document.getElementById("time").value;
 
-let res = await fetch("http://127.0.0.1:5000/appointments",{
+    const user_id = localStorage.getItem("user_id");
 
-method:"POST",
+    const response = await fetch("http://127.0.0.1:5000/appointments", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            user_id: user_id,
+            patient_name: patient_name,
+            email: email,
+            hospital_name: hospital,
+            appointment_date: date,
+            appointment_time: time
+        })
+    });
 
-headers:{
-"Content-Type":"application/json"
-},
+    const data = await response.json();
 
-body:JSON.stringify({
-
-patient_name:patientName,
-email:patientEmail,
-doctor_name:doctorName,
-appointment_date:appointmentDate,
-appointment_time:appointmentTime
-
-})
-
-})
-
-let data = await res.json()
-
-document.getElementById("bookingResult").innerHTML=data.message
-
+    document.getElementById("bookingResult").innerText = data.message;
 }
+
 async function loadAppointments() {
   try {
-    const response = await fetch(`${API_BASE}/appointments`);
+    const userId = getUserId();
+    const response = await fetch(`${API_BASE}/appointments/${userId}`);
     const data = await response.json();
 
     const list = document.getElementById("appointmentList");
+    if (!list) return;
+
     list.innerHTML = "";
 
     if (!data.appointments || data.appointments.length === 0) {
@@ -245,6 +240,7 @@ async function loadAppointments() {
 }
 
 async function saveRecord() {
+  const userId = getUserId();
   const patientId = document.getElementById("patientId").value.trim();
   const fileInput = document.getElementById("recordFile");
 
@@ -262,6 +258,7 @@ async function saveRecord() {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
+        user_id: userId,
         patient_id: patientId,
         file_name: fileName
       })
@@ -277,10 +274,13 @@ async function saveRecord() {
 
 async function loadRecords() {
   try {
-    const response = await fetch(`${API_BASE}/records`);
+    const userId = getUserId();
+    const response = await fetch(`${API_BASE}/records/${userId}`);
     const data = await response.json();
 
     const list = document.getElementById("recordList");
+    if (!list) return;
+
     list.innerHTML = "";
 
     if (!data.records || data.records.length === 0) {
@@ -302,35 +302,105 @@ async function loadRecords() {
   }
 }
 
-function setReminder() {
-  const medicine = document.getElementById("medicineName").value.trim();
+const reminderKey = () => `smartcare_reminders_${getUserId()}`;
+let reminders = JSON.parse(localStorage.getItem(reminderKey())) || [];
+
+if ("Notification" in window) {
+  Notification.requestPermission();
+}
+
+function addMedicineReminder() {
+  const medicine = document.getElementById("medicineName").value;
   const time = document.getElementById("medicineTime").value;
 
   if (!medicine || !time) {
-    document.getElementById("reminderResult").innerHTML = "Please fill medicine name and time.";
+    document.getElementById("reminderResult").innerHTML = "Please enter medicine and time";
     return;
   }
 
-  localStorage.setItem("smartcare_medicine", medicine);
-  localStorage.setItem("smartcare_medicine_time", time);
+  const reminder = {
+    medicine: medicine,
+    time: time,
+    taken: false
+  };
 
-  document.getElementById("reminderResult").innerHTML = `Reminder set for ${medicine} at ${time}.`;
-  alert(`Reminder set for ${medicine} at ${time}`);
+  reminders.push(reminder);
+  localStorage.setItem(reminderKey(), JSON.stringify(reminders));
+
+  document.getElementById("reminderResult").innerHTML = "Reminder added successfully";
+  document.getElementById("medicineName").value = "";
+  document.getElementById("medicineTime").value = "";
+
+  loadReminders();
+}
+
+function loadReminders() {
+  reminders = JSON.parse(localStorage.getItem(reminderKey())) || [];
+  const list = document.getElementById("reminderList");
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  reminders.forEach((r, index) => {
+    let status = r.taken ? "✔ Taken" : "⏰ Pending";
+
+    let li = document.createElement("li");
+    li.innerHTML = `
+      <strong>${r.medicine}</strong> - ${r.time}
+      <br>
+      Status: ${status}
+      <br>
+      <button onclick="markAsTaken(${index})">Mark as Taken</button>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function markAsTaken(index) {
+  reminders[index].taken = true;
+  localStorage.setItem(reminderKey(), JSON.stringify(reminders));
+  loadReminders();
+}
+
+function speakReminder(medicine) {
+  let msg = new SpeechSynthesisUtterance("Time to take " + medicine);
+  speechSynthesis.speak(msg);
+}
+
+function showNotification(medicine) {
+  if (!("Notification" in window)) return;
+
+  if (Notification.permission === "granted") {
+    navigator.serviceWorker.getRegistration().then(function(reg) {
+      if (reg) {
+        reg.showNotification("SmartCare Medicine Reminder", {
+          body: "Time to take " + medicine,
+          icon: "https://cdn-icons-png.flaticon.com/512/2966/2966489.png",
+          vibrate: [200, 100, 200],
+          tag: "medicine-reminder"
+        });
+      } else {
+        new Notification("SmartCare Medicine Reminder", {
+          body: "Time to take " + medicine,
+          icon: "https://cdn-icons-png.flaticon.com/512/2966/2966489.png"
+        });
+      }
+    });
+  }
 }
 
 setInterval(() => {
-  const medicine = localStorage.getItem("smartcare_medicine");
-  const time = localStorage.getItem("smartcare_medicine_time");
-  if (!medicine || !time) return;
-
-  const now = new Date();
-  const currentTime =
+  let now = new Date();
+  let currentTime =
     String(now.getHours()).padStart(2, "0") + ":" +
     String(now.getMinutes()).padStart(2, "0");
 
-  if (currentTime === time) {
-    alert(`Time to take ${medicine}`);
-  }
+  reminders.forEach(r => {
+    if (r.time === currentTime && !r.taken) {
+      showNotification(r.medicine);
+      speakReminder(r.medicine);
+    }
+  });
 }, 60000);
 
 function getBotReply(input) {
@@ -459,7 +529,8 @@ function initCharts() {
 
 async function loadLatestVitals() {
   try {
-    const response = await fetch(`${API_BASE}/vitals/latest`);
+    const userId = getUserId();
+    const response = await fetch(`${API_BASE}/vitals/latest/${userId}`);
     const data = await response.json();
 
     const box = document.getElementById("latestVitals");
@@ -484,9 +555,16 @@ async function loadLatestVitals() {
 let mapInstance = null;
 
 async function loadNearbyHospitals() {
-
   const hospitalList = document.getElementById("hospitalList");
+  const hospitalSelect = document.getElementById("hospitalSelect");
+
+  if (!hospitalList) return;
+
   hospitalList.innerHTML = "Getting your location...";
+
+  if (hospitalSelect) {
+    hospitalSelect.innerHTML = `<option value="">Select hospital from map</option>`;
+  }
 
   if (!navigator.geolocation) {
     hospitalList.innerHTML = "Geolocation not supported.";
@@ -510,7 +588,8 @@ async function loadNearbyHospitals() {
       attribution: "© OpenStreetMap"
     }).addTo(mapInstance);
 
-    L.marker([lat, lon]).addTo(mapInstance)
+    L.marker([lat, lon])
+      .addTo(mapInstance)
       .bindPopup("Your Location")
       .openPopup();
 
@@ -539,32 +618,52 @@ async function loadNearbyHospitals() {
 
       hospitalList.innerHTML = "<strong>Nearby Hospitals:</strong><br><br>";
 
+      if (hospitalSelect) {
+        hospitalSelect.innerHTML = `<option value="">Select hospital from map</option>`;
+      }
+
       data.elements.forEach((hospital, index) => {
 
         const name = hospital.tags?.name || "Hospital";
-        const address = hospital.tags?.["addr:street"] || "Address not available";
+
+        const address =
+          hospital.tags?.["addr:street"] ||
+          hospital.tags?.["addr:full"] ||
+          "Location available on map";
 
         const hLat = hospital.lat;
         const hLon = hospital.lon;
 
-        // Calculate distance
         const distance = getDistance(lat, lon, hLat, hLon).toFixed(2);
 
-        // Add marker
         L.marker([hLat, hLon])
           .addTo(mapInstance)
-          .bindPopup(name);
+          .bindPopup(`
+            <b>${name}</b><br>
+            Distance: ${distance} km<br>
+            <a href="https://www.google.com/maps/dir/?api=1&destination=${hLat},${hLon}" target="_blank">
+Open in Google Maps
+</a>
+          `);
 
-        const mapsLink = `https://www.google.com/maps/dir/${lat},${lon}/${hLat},${hLon}`;
+        if (hospitalSelect) {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = `${name} (${distance} km)`;
+          hospitalSelect.appendChild(option);
+        }
 
         hospitalList.innerHTML += `
           <div style="margin-bottom:12px;">
             <strong>${index + 1}. ${name}</strong><br>
             📍 ${address}<br>
             📏 Distance: ${distance} km<br>
-            🧭 <a href="${mapsLink}" target="_blank">Navigate with Google Maps</a>
+            🗺 <a href="https://www.google.com/maps?q=${hLat},${hLon}" target="_blank">
+            View Location
+            </a>
           </div>
         `;
+
       });
 
     } catch (error) {
@@ -577,10 +676,7 @@ async function loadNearbyHospitals() {
   });
 }
 
-
-// Distance calculation (Haversine Formula)
 function getDistance(lat1, lon1, lat2, lon2) {
-
   const R = 6371;
 
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -597,148 +693,12 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
   return R * c;
 }
-// MEDICINE REMINDER SYSTEM
-
-let reminders = JSON.parse(localStorage.getItem("smartcare_reminders")) || []
-
-
-// Ask notification permission
-if ("Notification" in window) {
-  Notification.requestPermission()
-}
-
-
-// Add reminder
-function addMedicineReminder(){
-
-let medicine = document.getElementById("medicineName").value
-let time = document.getElementById("medicineTime").value
-
-if(!medicine || !time){
-document.getElementById("reminderResult").innerHTML="Please enter medicine and time"
-return
-}
-
-let reminder = {
-medicine:medicine,
-time:time,
-taken:false
-}
-
-reminders.push(reminder)
-
-localStorage.setItem("smartcare_reminders",JSON.stringify(reminders))
-
-document.getElementById("reminderResult").innerHTML="Reminder added successfully"
-
-document.getElementById("medicineName").value=""
-document.getElementById("medicineTime").value=""
-
-loadReminders()
-
-}
-
-
-// Load reminder list
-function loadReminders(){
-
-let list=document.getElementById("reminderList")
-
-if(!list) return
-
-list.innerHTML=""
-
-reminders.forEach((r,index)=>{
-
-let status = r.taken ? "✔ Taken" : "⏰ Pending"
-
-let li=document.createElement("li")
-
-li.innerHTML=`
-<strong>${r.medicine}</strong> - ${r.time}
-<br>
-Status: ${status}
-<br>
-<button onclick="markAsTaken(${index})">Mark as Taken</button>
-`
-
-list.appendChild(li)
-
-})
-
-}
-
-
-// Mark medicine as taken
-function markAsTaken(index){
-
-reminders[index].taken=true
-
-localStorage.setItem("smartcare_reminders",JSON.stringify(reminders))
-
-loadReminders()
-
-}
-
-
-// Speak reminder
-function speakReminder(medicine){
-
-let msg = new SpeechSynthesisUtterance("Time to take " + medicine)
-
-speechSynthesis.speak(msg)
-
-}
-
-
-// Notification reminder
-function showNotification(medicine){
-
-if(Notification.permission==="granted"){
-
-new Notification("Medicine Reminder",{
-body:"Time to take "+medicine,
-icon:"https://cdn-icons-png.flaticon.com/512/2966/2966489.png"
-})
-
-}
-
-}
-
-
-// Reminder checker
-setInterval(()=>{
-
-let now = new Date()
-
-let currentTime =
-String(now.getHours()).padStart(2,"0")+":"+
-String(now.getMinutes()).padStart(2,"0")
-
-reminders.forEach(r=>{
-
-if(r.time===currentTime && !r.taken){
-
-showNotification(r.medicine)
-
-speakReminder(r.medicine)
-
-}
-
-})
-
-},60000)
-
-
-// Load reminders when page loads
-document.addEventListener("DOMContentLoaded",()=>{
-loadReminders()
-})
 
 window.addEventListener("DOMContentLoaded", () => {
   loadSymptoms();
   loadAppointments();
   loadRecords();
   loadLatestVitals();
+  loadReminders();
   initCharts();
 });
